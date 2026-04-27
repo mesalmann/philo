@@ -8,9 +8,14 @@ SRCS    = main.c \
           arg_check.c \
           init.c \
           utils.c \
-          synchro_utils.c \
           time_utils.c \
-          dinner.c
+          routine.c \
+          clean.c \
+          monitor.c \
+          actions.c \
+          print.c \
+          state.c \
+          lifecycle.c
 
 OBJS    = $(SRCS:.c=.o)
 
