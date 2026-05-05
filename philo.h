@@ -4,69 +4,61 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <unistd.h>
-# include <stdbool.h>
 # include <pthread.h>
 # include <sys/time.h>
 # include <limits.h>
 
-typedef struct s_program	t_program;
-typedef struct s_fork		t_fork;
-typedef struct s_philo		t_philo;
+typedef struct s_table	t_table;
 
-struct s_fork
-{
-	pthread_mutex_t	mutex;
-};
-
-struct s_philo
+typedef struct s_fork
 {
 	int				id;
-	int				eat_count;
-	long			last_meal;
-	pthread_t		thread;
 	pthread_mutex_t	mutex;
+}	t_fork;
+
+typedef struct s_philo
+{
+	int				id;
+	int				meals_eaten;
+	long			last_meal_ms;
+	pthread_t		thread;
+	pthread_mutex_t	lock;
 	t_fork			*left_fork;
 	t_fork			*right_fork;
-	t_program		*program;
-};
+	t_table			*table;
+}	t_philo;
 
-struct s_program
+typedef struct s_table
 {
 	int				philo_count;
 	long			time_to_die;
 	long			time_to_eat;
 	long			time_to_sleep;
-	int				must_eat;
-	long			start_time;
-	bool			stop;
+	int				meal_limit;
+	long			start_ms;
+	int				stop_flag;
 	t_fork			*forks;
+	pthread_mutex_t	print_lock;
+	pthread_mutex_t	stop_lock;
 	t_philo			*philos;
-	pthread_mutex_t	stop_mutex;
-	pthread_mutex_t	print_mutex;
-};
+}	t_table;
 
-void	error_exit(const char *error);
+void	exit_error(char *msg);
+void	parse_args(t_table *t, char **av);
 
-int		is_valid_num(char *s);
-int		is_arg_valid(char **av);
-int		ft_atoi(char *s);
-void	parse_arg(t_program *program, char **av);
+void	init_table(t_table *t);
+void	launch_sim(t_table *t);
+void	cleanup(t_table *t);
 
-void	data_init(t_program *program);
-void	clean(t_program *program);
-
-void	start_dinner(t_program *program);
 void	*philo_routine(void *arg);
 
-void	log_action(t_philo *philo, char *msg);
-void	log_death(t_philo *philo);
+void	monitor_table(t_table *t);
+int		is_full(t_philo *p);
 
-int		is_stopped(t_program *program);
-void	set_stop(t_program *program);
-
-void	supervisor_loop(t_program *program);
-
-long	get_time_ms(void);
-void	ft_usleep(long msec, t_program *program);
+long	now_ms(void);
+void	wait_ms(long ms, t_table *t);
+void	log_state(t_philo *p, char *msg);
+void	log_death(t_philo *p);
+int		is_stopped(t_table *t);
 
 #endif

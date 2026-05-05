@@ -1,59 +1,76 @@
 #include "philo.h"
 
-static int	philo_is_dead(t_philo *philo)
+int	is_full(t_philo *p)
 {
-	long	last_meal;
-	long	now;
+	int	done;
 
-	pthread_mutex_lock(&philo->mutex);
-	last_meal = philo->last_meal;
-	pthread_mutex_unlock(&philo->mutex);
-	now = get_time_ms();
-	if (now - last_meal >= philo->program->time_to_die)
+	if (p->table->meal_limit < 0)
+		return (0);
+	pthread_mutex_lock(&p->lock);
+	done = (p->meals_eaten >= p->table->meal_limit);
+	pthread_mutex_unlock(&p->lock);
+	return (done);
+}
+
+static int	philo_died(t_philo *p)
+{
+	long	elapsed;
+
+	pthread_mutex_lock(&p->lock);
+	elapsed = now_ms() - p->last_meal_ms;
+	pthread_mutex_unlock(&p->lock);
+	if (elapsed >= p->table->time_to_die)
 	{
-		log_death(philo);
+		log_death(p);
 		return (1);
 	}
 	return (0);
 }
 
-static int	all_ate_enough(t_program *program)
+static int	all_ate_enough(t_table *t)
 {
 	int	i;
 	int	count;
 
-	if (program->must_eat == -1)
+	if (t->meal_limit < 0)
 		return (0);
-	i = 0;
 	count = 0;
-	while (i < program->philo_count)
+	i = 0;
+	while (i < t->philo_count)
 	{
-		pthread_mutex_lock(&program->philos[i].mutex);
-		if (program->philos[i].eat_count >= program->must_eat)
+		pthread_mutex_lock(&t->philos[i].lock);
+		if (t->philos[i].meals_eaten >= t->meal_limit)
 			count++;
-		pthread_mutex_unlock(&program->philos[i].mutex);
+		pthread_mutex_unlock(&t->philos[i].lock);
 		i++;
 	}
-	return (count == program->philo_count);
+	return (count == t->philo_count);
 }
 
-void	supervisor_loop(t_program *program)
+static void	stop_sim(t_table *t)
+{
+	pthread_mutex_lock(&t->stop_lock);
+	t->stop_flag = 1;
+	pthread_mutex_unlock(&t->stop_lock);
+}
+
+void	monitor_table(t_table *t)
 {
 	int	i;
 
-	while (!is_stopped(program))
+	while (!is_stopped(t))
 	{
-		if (all_ate_enough(program))
-		{
-			set_stop(program);
-			return ;
-		}
 		i = 0;
-		while (i < program->philo_count)
+		while (i < t->philo_count)
 		{
-			if (philo_is_dead(&program->philos[i]))
+			if (philo_died(&t->philos[i]))
 				return ;
 			i++;
+		}
+		if (all_ate_enough(t))
+		{
+			stop_sim(t);
+			return ;
 		}
 		usleep(500);
 	}

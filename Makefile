@@ -1,21 +1,13 @@
 NAME    = philo
 
-CC      = gcc
+CC      = cc
 CFLAGS  = -Wall -Wextra -Werror -pthread
 
 SRCS    = main.c \
-          parsing.c \
-          arg_check.c \
           init.c \
-          utils.c \
-          time_utils.c \
           routine.c \
-          clean.c \
           monitor.c \
-          actions.c \
-          print.c \
-          state.c \
-          lifecycle.c
+          utils.c
 
 OBJS    = $(SRCS:.c=.o)
 

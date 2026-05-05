@@ -1,75 +1,75 @@
 #include "philo.h"
 
-static int	ate_enough(t_philo *philo)
+static void	take_forks(t_philo *p)
 {
-	int	done;
+	t_fork	*first;
+	t_fork	*second;
 
-	if (philo->program->must_eat == -1)
-		return (0);
-	pthread_mutex_lock(&philo->mutex);
-	done = philo->eat_count >= philo->program->must_eat;
-	pthread_mutex_unlock(&philo->mutex);
-	return (done);
-}
-
-static void	grab_forks(t_philo *philo)
-{
-	if (philo->id % 2 == 0)
+	if (p->left_fork->id < p->right_fork->id)
 	{
-		pthread_mutex_lock(&philo->right_fork->mutex);
-		log_action(philo, "has taken a fork");
-		pthread_mutex_lock(&philo->left_fork->mutex);
-		log_action(philo, "has taken a fork");
+		first = p->left_fork;
+		second = p->right_fork;
 	}
 	else
 	{
-		pthread_mutex_lock(&philo->left_fork->mutex);
-		log_action(philo, "has taken a fork");
-		pthread_mutex_lock(&philo->right_fork->mutex);
-		log_action(philo, "has taken a fork");
+		first = p->right_fork;
+		second = p->left_fork;
 	}
+	pthread_mutex_lock(&first->mutex);
+	log_state(p, "has taken a fork");
+	pthread_mutex_lock(&second->mutex);
+	log_state(p, "has taken a fork");
 }
 
-static void	philo_eat(t_philo *philo)
+static void	eat(t_philo *p)
 {
-	grab_forks(philo);
-	pthread_mutex_lock(&philo->mutex);
-	philo->last_meal = get_time_ms();
-	philo->eat_count++;
-	pthread_mutex_unlock(&philo->mutex);
-	log_action(philo, "is eating");
-	ft_usleep(philo->program->time_to_eat, philo->program);
-	pthread_mutex_unlock(&philo->left_fork->mutex);
-	pthread_mutex_unlock(&philo->right_fork->mutex);
+	take_forks(p);
+	pthread_mutex_lock(&p->lock);
+	p->last_meal_ms = now_ms();
+	p->meals_eaten++;
+	pthread_mutex_unlock(&p->lock);
+	log_state(p, "is eating");
+	wait_ms(p->table->time_to_eat, p->table);
+	pthread_mutex_unlock(&p->left_fork->mutex);
+	pthread_mutex_unlock(&p->right_fork->mutex);
 }
 
-static void	philo_rest(t_philo *philo)
+static void	handle_solo(t_philo *p)
 {
-	log_action(philo, "is sleeping");
-	ft_usleep(philo->program->time_to_sleep, philo->program);
-	log_action(philo, "is thinking");
-	if (philo->program->philo_count % 2 == 1)
-		ft_usleep(philo->program->time_to_eat, philo->program);
+	pthread_mutex_lock(&p->left_fork->mutex);
+	log_state(p, "has taken a fork");
+	wait_ms(p->table->time_to_die + 1, p->table);
+	pthread_mutex_unlock(&p->left_fork->mutex);
+}
+
+static void	do_cycle(t_philo *p)
+{
+	eat(p);
+	if (is_full(p))
+		return ;
+	log_state(p, "is sleeping");
+	wait_ms(p->table->time_to_sleep, p->table);
+	if (is_stopped(p->table))
+		return ;
+	log_state(p, "is thinking");
+	if (p->table->philo_count % 2 == 1)
+		wait_ms(p->table->time_to_eat, p->table);
 }
 
 void	*philo_routine(void *arg)
 {
-	t_philo	*philo;
+	t_philo	*p;
 
-	philo = (t_philo *)arg;
-	if (philo->program->philo_count == 1)
+	p = (t_philo *)arg;
+	if (p->table->philo_count == 1)
 	{
-		log_action(philo, "has taken a fork");
-		ft_usleep(philo->program->time_to_die, philo->program);
+		handle_solo(p);
 		return (NULL);
 	}
-	if (philo->id % 2 == 0)
-		usleep(1000);
-	while (!is_stopped(philo->program) && !ate_enough(philo))
-	{
-		philo_eat(philo);
-		if (!ate_enough(philo))
-			philo_rest(philo);
-	}
+	if (p->id % 2 == 0 || (p->table->philo_count % 2 == 1
+			&& p->id == p->table->philo_count))
+		wait_ms(p->table->time_to_eat, p->table);
+	while (!is_stopped(p->table) && !is_full(p))
+		do_cycle(p);
 	return (NULL);
 }
