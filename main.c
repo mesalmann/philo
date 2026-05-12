@@ -1,9 +1,26 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   main.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mesalman <mesalman@student.42istanbul.com  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/05 13:30:46 by mesalman          #+#    #+#             */
+/*   Updated: 2026/05/05 13:30:47 by mesalman         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "philo.h"
 
-void	exit_error(char *msg)
+static int	err_msg(char *msg)
 {
-	printf("Error: %s\n", msg);
-	exit(EXIT_FAILURE);
+	int	len;
+
+	len = 0;
+	while (msg[len])
+		len++;
+	write(2, msg, len);
+	return (1);
 }
 
 static int	is_digits_only(char *s)
@@ -32,40 +49,37 @@ static int	str_to_int(char *s)
 	while (s[i])
 	{
 		if (result > (long)INT_MAX / 10)
-			exit_error("argument too large");
+			return (-1);
 		result = result * 10 + (s[i] - '0');
 		if (result > INT_MAX)
-			exit_error("argument too large");
+			return (-1);
 		i++;
 	}
 	return ((int)result);
 }
 
-void	parse_args(t_table *t, char **av)
+int	read_args(t_table *t, char **av)
 {
 	int	i;
 
 	i = 1;
-	while (av[i])
-	{
-		if (!is_digits_only(av[i]))
-			exit_error("invalid argument");
+	while (av[i] && is_digits_only(av[i]))
 		i++;
-	}
+	if (av[i])
+		return (err_msg("Error: invalid argument\n"));
 	t->philo_count = str_to_int(av[1]);
-	t->time_to_die = str_to_int(av[2]);
-	t->time_to_eat = str_to_int(av[3]);
-	t->time_to_sleep = str_to_int(av[4]);
-	if (!t->philo_count || !t->time_to_die
-		|| !t->time_to_eat || !t->time_to_sleep)
-		exit_error("invalid argument");
-	t->meal_limit = -1;
+	t->starvation_ms = str_to_int(av[2]);
+	t->meal_ms = str_to_int(av[3]);
+	t->nap_ms = str_to_int(av[4]);
+	if (t->philo_count <= 0 || t->starvation_ms <= 0
+		|| t->meal_ms <= 0 || t->nap_ms <= 0)
+		return (err_msg("Error: invalid argument\n"));
+	t->max_meals = -1;
 	if (av[5])
-	{
-		t->meal_limit = str_to_int(av[5]);
-		if (t->meal_limit <= 0)
-			exit_error("meal limit must be a positive integer");
-	}
+		t->max_meals = str_to_int(av[5]);
+	if (av[5] && t->max_meals <= 0)
+		return (err_msg("Error: invalid argument\n"));
+	return (0);
 }
 
 int	main(int ac, char **av)
@@ -74,12 +88,12 @@ int	main(int ac, char **av)
 
 	if (ac != 5 && ac != 6)
 	{
-		printf("Usage: ./philo count time_to_die ");
-		printf("time_to_eat time_to_sleep [meals]\n");
+		write(1, "Usage: ./philo count time_to_die ", 33);
+		write(1, "time_to_eat time_to_sleep [meals]\n", 34);
 		return (1);
 	}
-	parse_args(&t, av);
-	init_table(&t);
+	if (read_args(&t, av) || init_table(&t))
+		return (1);
 	launch_sim(&t);
 	cleanup(&t);
 	return (0);

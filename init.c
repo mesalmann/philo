@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   init.c                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mesalman <mesalman@student.42istanbul.com  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/05/05 13:30:36 by mesalman          #+#    #+#             */
+/*   Updated: 2026/05/05 13:30:39 by mesalman         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "philo.h"
 
 static void	init_forks(t_table *t)
@@ -21,7 +33,7 @@ static void	init_philos(t_table *t)
 	while (i < t->philo_count)
 	{
 		t->philos[i].id = i + 1;
-		t->philos[i].meals_eaten = 0;
+		t->philos[i].meal_count = 0;
 		t->philos[i].last_meal_ms = 0;
 		t->philos[i].table = t;
 		pthread_mutex_init(&t->philos[i].lock, NULL);
@@ -31,38 +43,38 @@ static void	init_philos(t_table *t)
 	}
 }
 
-void	init_table(t_table *t)
+int	init_table(t_table *t)
 {
 	t->stop_flag = 0;
 	t->philos = malloc(sizeof(t_philo) * t->philo_count);
 	if (!t->philos)
-		exit_error("malloc failed");
+		return (write(2, "Error: malloc\n", 14), 1);
 	t->forks = malloc(sizeof(t_fork) * t->philo_count);
 	if (!t->forks)
 	{
 		free(t->philos);
-		exit_error("malloc failed");
+		return (write(2, "Error: malloc\n", 14), 1);
 	}
-	pthread_mutex_init(&t->print_lock, NULL);
-	pthread_mutex_init(&t->stop_lock, NULL);
+	pthread_mutex_init(&t->write_lock, NULL);
 	init_forks(t);
 	init_philos(t);
+	return (0);
 }
 
 void	launch_sim(t_table *t)
 {
 	int	i;
 
-	t->start_ms = now_ms();
+	t->start_ms = ms_now();
 	i = 0;
 	while (i < t->philo_count)
 	{
 		t->philos[i].last_meal_ms = t->start_ms;
 		pthread_create(&t->philos[i].thread, NULL,
-			philo_routine, &t->philos[i]);
+			philo_life, &t->philos[i]);
 		i++;
 	}
-	monitor_table(t);
+	monitor(t);
 }
 
 void	cleanup(t_table *t)
@@ -77,8 +89,7 @@ void	cleanup(t_table *t)
 		pthread_mutex_destroy(&t->forks[i].mutex);
 		i++;
 	}
-	pthread_mutex_destroy(&t->print_lock);
-	pthread_mutex_destroy(&t->stop_lock);
+	pthread_mutex_destroy(&t->write_lock);
 	free(t->forks);
 	free(t->philos);
 }
