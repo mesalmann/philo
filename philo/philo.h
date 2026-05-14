@@ -43,6 +43,7 @@ typedef struct s_philo
 typedef struct s_table
 {
 	int				philo_count;
+	int				threads_started;
 	long			starvation_ms;
 	long			meal_ms;
 	long			nap_ms;
@@ -51,19 +52,24 @@ typedef struct s_table
 	int				stop_flag;
 	t_fork			*forks;
 	pthread_mutex_t	write_lock;
+	pthread_mutex_t	stop_lock;
 	t_philo			*philos;
 }	t_table;
 
 int		read_args(t_table *t, char **av);
 
-int		init_table(t_table *t);
-void	launch_sim(t_table *t);
+int		dinner_prep(t_table *t);
+void	start_dinner(t_table *t);
+int		prep_fail(t_table *t, int stage);
 void	cleanup(t_table *t);
+void	destroy_forks(t_table *t);
 
 void	*philo_life(void *arg);
+void	eat(t_philo *p);
 
 void	monitor(t_table *t);
 int		is_full(t_philo *p);
+int		philo_dead_now(t_philo *p);
 
 long	ms_now(void);
 void	sleep_ms(long ms, t_table *t);

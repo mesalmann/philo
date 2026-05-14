@@ -4,9 +4,12 @@ CC      = cc
 CFLAGS  = -Wall -Wextra -Werror -pthread
 
 SRCS    = main.c \
+          parse.c \
           init.c \
-          cycle.c \
-          watch.c \
+          clean.c \
+          meal.c \
+          philo.c \
+          monitor.c \
           utils.c
 
 OBJS    = $(SRCS:.c=.o)
@@ -20,7 +23,7 @@ $(NAME): $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS)
+	rm -f *.o
 
 fclean: clean
 	rm -f $(NAME)

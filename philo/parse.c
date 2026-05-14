@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
+/*   parse.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mesalman <mesalman@student.42istanbul.com  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/05/05 13:30:46 by mesalman          #+#    #+#             */
-/*   Updated: 2026/05/05 13:30:47 by mesalman         ###   ########.fr       */
+/*   Created: 2026/05/12 13:30:46 by mesalman          #+#    #+#             */
+/*   Updated: 2026/05/12 13:30:47 by mesalman         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,6 +58,16 @@ static int	str_to_int(char *s)
 	return ((int)result);
 }
 
+static int	arg_control(t_table *t, char **av)
+{
+	if (t->philo_count <= 0 || t->starvation_ms <= 0
+		|| t->meal_ms <= 0 || t->nap_ms <= 0)
+		return (err_msg("Error: invalid argument\n"));
+	if (av[5] && t->max_meals <= 0)
+		return (err_msg("Error: invalid argument\n"));
+	return (0);
+}
+
 int	read_args(t_table *t, char **av)
 {
 	int	i;
@@ -71,30 +81,8 @@ int	read_args(t_table *t, char **av)
 	t->starvation_ms = str_to_int(av[2]);
 	t->meal_ms = str_to_int(av[3]);
 	t->nap_ms = str_to_int(av[4]);
-	if (t->philo_count <= 0 || t->starvation_ms <= 0
-		|| t->meal_ms <= 0 || t->nap_ms <= 0)
-		return (err_msg("Error: invalid argument\n"));
 	t->max_meals = -1;
 	if (av[5])
 		t->max_meals = str_to_int(av[5]);
-	if (av[5] && t->max_meals <= 0)
-		return (err_msg("Error: invalid argument\n"));
-	return (0);
-}
-
-int	main(int ac, char **av)
-{
-	t_table	t;
-
-	if (ac != 5 && ac != 6)
-	{
-		write(1, "Usage: ./philo count time_to_die ", 33);
-		write(1, "time_to_eat time_to_sleep [meals]\n", 34);
-		return (1);
-	}
-	if (read_args(&t, av) || init_table(&t))
-		return (1);
-	launch_sim(&t);
-	cleanup(&t);
-	return (0);
+	return (arg_control(t, av));
 }
